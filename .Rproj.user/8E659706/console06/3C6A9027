@@ -1,0 +1,28 @@
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_c[Kaalling_thyroptera[00m$ git add.[K .
+fatal: no es un repositorio git ( o ningún padre en el punto de montado /home/m)
+Parando en el límite del sistema de archivos (GIT_DISCOVERY_ACROSS_FILESYSTEM no establecido).
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git remote add origin https://github.com/maRcce10/sex-dependent_response_calling_thyroptera.git
+fatal: no es un repositorio git ( o ningún padre en el punto de montado /home/m)
+Parando en el límite del sistema de archivos (GIT_DISCOVERY_ACROSS_FILESYSTEM no establecido).
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git remote add origin https://github.com/maRcce10/sex-dependent_response_calling_thyroptera.git
+fatal: no es un repositorio git ( o ningún padre en el punto de montado /home/m)
+Parando en el límite del sistema de archivos (GIT_DISCOVERY_ACROSS_FILESYSTEM no establecido).
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ ^C
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git init
+Inicializado repositorio Git vacío en /home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera/.git/
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git initremote add origin https://github.com/maRcce10/sex-dependent_response_calling_thyroptera.git
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git remote add origin https://github.com/maRcce10/sex-dependent_response_calling_thyroptera.git[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cinit[K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cremote add origin https://github.com/maRcce10/sex-dependent_response_calling_thyroptera.git[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cgit push -u origin master
+error: src refspec master does not match any.
+error: fallo el push de algunas referencias a 'https://github.com/maRce10/sex-dependent_response_calling_thyroptera.git'
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git push -u origin master[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K
+fatal: La rama actual master no tiene una rama upstream.
+Para realizar un push de la rama actual y configurar el remoto como upstream, use
+
+	git push --set-upstream origin master
+
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git push --set-upstream origin master
+error: src refspec master does not match any.
+error: fallo el push de algunas referencias a 'https://github.com/maRce10/sex-dependent_response_calling_thyroptera.git'
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git add .
