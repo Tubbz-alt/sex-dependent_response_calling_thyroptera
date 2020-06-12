@@ -1,0 +1,24 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1591965103859.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "4DF97AF5",
+    "lastKnownWriteTime" : 1591973068,
+    "last_content_update" : 1591973068295,
+    "path" : "~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera/scripts/Statistical analysis.Rmd",
+    "project_path" : "scripts/Statistical analysis.Rmd",
+    "properties" : {
+        "chunk_output_type" : "console",
+        "cursorPosition" : "136,52",
+        "scrollLine" : "135",
+        "tempName" : "Untitled2"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

@@ -1,0 +1,1405 @@
+---
+title: "Thyroptera roosting preference biomechanics"
+subtitle: "Statistical analysis"
+author: <a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas</a>
+ &nbsp; 
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r packages, message=FALSE, warning = FALSE, echo = FALSE, eval = TRUE, include = FALSE}
+
+rm(list = ls())
+
+# unload all non-based packages
+out <- sapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), function(x) try(detach(x, unload = FALSE, character.only = TRUE), silent = T))
+
+## add 'developer/' to packages to be installed from github
+x <- c("RColorBrewer", "corrplot", "ggplot2", "readxl", "ranger", "caret", "pbapply", "viridis", "MCMCglmm", "MuMIn", "MASS", "smacof", "vegan", "kableExtra", "tidyr")
+
+aa <- lapply(x, function(y) {
+  
+  # get pakage name
+  pkg <- strsplit(y, "/")[[1]]
+  pkg <- pkg[length(pkg)]
+  
+  # check if installed, if not then install 
+  if (!pkg %in% installed.packages()[,"Package"])  {
+
+      if (grepl("/", y))  devtools::install_github(y, force = TRUE) else
+    install.packages(y) 
+    }
+
+  # load package
+  try(require(pkg, character.only = T), silent = T)
+})
+
+```
+
+```{r functions, eval = TRUE, echo = FALSE}
+
+cols <- viridis(10, alpha = 0.7)
+
+extract_proximity_oob <- function(fit, olddata) {
+  pred = predict(fit, olddata, type = "terminalNodes")$predictions
+  prox = matrix(NA, nrow(pred), nrow(pred))
+  ntree = ncol(pred)
+  n = nrow(prox)
+  
+  if (is.null(fit$inbag.counts)) {
+    stop("call ranger with keep.inbag = TRUE")
+  }
+  
+  # Get inbag counts
+  inbag = simplify2array(fit$inbag.counts)
+  
+  for (i in 1:n) {
+    for (j in 1:n) {
+      # Use only trees where both obs are OOB
+      tree_idx = inbag[i, ] == 0 & inbag[j, ] == 0
+      prox[i, j] = sum(pred[i, tree_idx] == pred[j, tree_idx]) / sum(tree_idx)
+    }
+  }
+  
+  prox
+}
+```
+
+```{r calculate parameters, eval = FALSE, echo = FALSE}
+## find inflection points in z vs distance
+
+traj.dat <- read.csv("trajectories pooled data.csv", stringsAsFactors = FALSE)
+
+# use butterworth filtered height
+traj.dat$Z <- traj.dat$bw.Z
+
+traj.list <- split(traj.dat, f = traj.dat$file)
+
+out <- lapply(traj.list, function(Y) {
+    
+    ts <- Y$Z  
+
+    # a <- c(1:10, 9:0)
+    # as.numeric(c(FALSE, diff(diff(a) > 0) == -1))  
+
+    # count up-down inflections
+    Y$inflections <- as.numeric(c(FALSE, diff(diff(ts) > 0) == -1, FALSE))  
+    
+    Y$infl.time <- ifelse(Y$inflections > 0, Y$time, NA) 
+    Y$infl.dist <- ifelse(Y$inflections > 0, Y$distance, NA) 
+    Y$infl.height <- ifelse(Y$inflections > 0, Y$Z, NA) 
+
+    return(Y)  
+  })
+
+traj.infl <- do.call(rbind, out)
+
+# head(traj.infl)
+
+dscnt.cutoff <- -0.11
+
+summ.l <- lapply(unique(traj.infl$file), function(x){
+  X <- traj.infl[traj.infl$file == x, ]
+  
+  # distance to entry at last inflection
+  dist.last.infl <- X$distance[which.max(X$infl.time)]  
+  
+  # height to entry at last inflection
+  height.last.infl <- X$Z[which.max(X$infl.time)]  
+  
+# mean speed after last inflection
+  speed.last.infl <- mean(X$speed[which.max(X$infl.time):nrow(X)], na.rm = TRUE)
+  
+  # mean bw speed after last inflection
+  bw.speed.last.infl <- mean(X$bw.speed[which.max(X$infl.time):nrow(X)], na.rm = TRUE) 
+
+   # mean  acceleration
+  accel.last.infl <- mean(X$acceleration[which.max(X$infl.time):nrow(X)], na.rm = TRUE)
+
+   # mean bw  acceleration
+    bw.accel.last.infl <- mean(X$bw.acceleration[which.max(X$infl.time):nrow(X)], na.rm = TRUE)
+  
+   # mean angle in y
+    xy.angle.last.infl <- mean(X$ang.xy[(which.max(X$infl.time) - 3):nrow(X)], na.rm = TRUE)
+
+        yz.angle.last.infl <- mean(X$ang.yz[(which.max(X$infl.time) - 3):nrow(X)], na.rm = TRUE)
+    
+      # distance to entry at start of descent fase
+  dist.str.dscnt <- min(X$distance[X$time >= dscnt.cutoff], na.rm = TRUE)  
+
+  # height to entry at start of descent fase
+  height.strt.dscnt <- X$Z[which(X$time >= dscnt.cutoff)[1]]  
+  
+  # mean speed after last inflection
+  speed.dscnt <- mean(X$speed[X$time >= dscnt.cutoff], na.rm = TRUE)   
+
+  # mean bw speed after last inflection
+  bw.speed.dscnt <- mean(X$bw.speed[X$time >= dscnt.cutoff], na.rm = TRUE)   
+  
+  # mean  acceleration at descent phase
+  accel.dscnt <- mean(X$acceleration[X$time >= dscnt.cutoff], na.rm = TRUE)
+
+  # mean bw acceleration at descent phase
+  bw.accel.dscnt <- mean(X$bw.acceleration[X$time >= dscnt.cutoff], na.rm = TRUE)
+  
+     # mean angle in y
+    xy.angle.dscnt <- mean(X$ang.xy[(which(X$time >= dscnt.cutoff) - 3)[1]:nrow(X)], na.rm = TRUE)
+
+     # mean angle in z,y
+    yz.angle.dscnt <- mean(X$ang.yz[(which(X$time >= dscnt.cutoff) - 3)[1]:nrow(X)], na.rm = TRUE)
+  
+  # number of inflections at descent
+  num.infl.dscnt <- sum(X$inflections[X$time >= dscnt.cutoff], na.rm = TRUE)
+  
+  df <- data.frame(event = x, 
+                   leave.type = X$leave.type[1], 
+                   dist.last.infl, 
+                   height.last.infl, 
+                   # speed.last.infl, 
+                   bw.speed.last.infl, 
+                   # accel.last.infl, 
+                   bw.accel.last.infl, 
+                   xy.angle.last.infl,
+                   yz.angle.last.infl,
+                   dist.str.dscnt, 
+                   height.strt.dscnt, 
+                   # speed.dscnt, 
+                   bw.speed.dscnt, 
+                   # accel.dscnt, 
+                   bw.accel.dscnt, 
+                   num.infl.dscnt,
+                   xy.angle.dscnt,
+                   yz.angle.dscnt)
+
+  return(df)
+  
+})
+
+summ.traj <- do.call(rbind, summ.l)
+
+write.csv(summ.traj, "flying_trajectory_descriptors.csv", row.names = FALSE)
+
+```
+
+```{r prepare data, eval = TRUE, echo = FALSE}
+
+summ.traj <- read.csv("flying_trajectory_descriptors.csv", stringsAsFactors = FALSE)
+
+summ.traj2 <- summ.traj[summ.traj$leave.type < 3, -1]
+
+
+summ.traj2$leave.type <- as.factor(summ.traj2$leave.type)
+
+ # run random forest
+
+pca.trans <- princomp(summ.traj2[,-1], cor = TRUE)
+
+trans.traj <- preProcess(summ.traj2[, -1], method=c("center", "scale", "BoxCox", "corr"))
+
+summ.traj3 <- predict(trans.traj, summ.traj2)
+
+
+```
+
+
+## Random forest (and randomization test) on flight trajectories  
+
+```{r random forest leaf shape, eval = FALSE, echo = FALSE}
+
+print("variables")
+names(summ.traj3)
+
+rf <- ranger(leave.type ~ ., data = summ.traj3, num.trees = 10000, importance = "impurity", keep.inbag = TRUE)
+
+rf.error <- rf$prediction.error
+
+pboptions(type = "timer")
+  
+rnd.error <- pbsapply(1:10000, cl = 3, function(x){
+
+  Y <- summ.traj3
+
+  Y$leave.type <- sample(Y$leave.type)
+
+  rf <- ranger(leave.type ~ ., data = Y, num.trees = 10000, importance = "impurity")
+
+  rf.error <- rf$prediction.error
+
+  return(rf.error)
+  }
+  )
+
+prx.mat <- extract_proximity_oob(fit = rf.random.res$rf.model, olddata = summ.traj3)
+
+prx.mat <- rf.random.res$prx.mat
+
+diss <- dist(t(prx.mat))   ## Euclidean distances 
+fit <- mds(diss, ndim = 2)        ## 2D interval MDS
+
+set.seed(123)
+rf.mds <- bootmds(fit, prx.mat, method.dat = "euclidean", nrep = 50)
+
+rf.random.res <- list(rf.error = rf.error, rnd.error = rnd.error, rf.model = rf, prx.mat = prx.mat, rf.mds = rf.mds)
+
+
+saveRDS(rf.random.res, "Random forest randomization test resutls.RDS")
+
+```
+
+```{r random forest leaf shape results, eval = TRUE, echo = FALSE}
+
+rf.random.res <- readRDS("Random forest randomization test resutls.RDS")
+
+print("Random forest error")
+(rf.error <- rf.random.res$rf.error)
+
+rnd.error <- rf.random.res$rnd.error
+hist(rnd.error, main = " Random error 10000 iterations", col = cols[5], xlab = "Classification error")
+abline(v = rf.error, col = cols[10], lty = 2, lwd = 3)  
+
+#p value
+print("p-value")
+sum(rnd.error < rf.error) / length(rnd.error)
+
+```
+
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *Trajectories are significantly different between the 2 leaf shapes*
+
+</div>
+
+&nbsp;
+
+### distribution of flight trajectory variables
+```{r, mean plots, eval = TRUE, echo = FALSE, fig.width=10, fig.height=10}
+
+summ.gat <- tidyr::gather(summ.traj3, key = "variable", value = "value", names(summ.traj3)[-1])
+
+levels(summ.gat$leave.type) <- c("Truncated", "Pointy")
+
+agg.m <- aggregate(value ~ variable + leave.type, data = summ.gat, mean)
+# agg.m$sd <- aggregate(value ~ variable + leave.type, data = summ.gat, sd)$value
+# 
+# ggplot(agg.m, aes(leave.type, value, col = leave.type)) +
+#   geom_point(size = 2) +
+#   geom_errorbar( aes(ymin = value - sd, ymax = value + sd), width = 0.3) +
+#     scale_color_manual(values = cols[c(2, 9)]) +
+#   facet_wrap(~variable) +
+#   theme_classic()
+  
+ggplot(summ.gat, aes(leave.type, value, fill = leave.type)) +
+geom_violin() + 
+   geom_point(size = 4, data = agg.m, fill = "white", pch = 21, col = "black") +
+    scale_fill_manual(values = cols[c(2, 9)]) +
+  facet_wrap(~variable) +
+  theme_classic()
+
+```
+
+## Compare variance 
+
+Multivariate homogeneity of groups dispersions (variances) test
+```{r,eval = TRUE, echo = FALSE}
+
+## Bray-Curtis distances between samples
+dis <- vegdist(summ.traj3[, -1], method = "euclidean")
+
+## Calculate multivariate dispersions
+mod <- betadisper(dis, summ.traj3$leave.type)
+
+anova(mod)
+
+# print("Distance to leave at last inflection")
+# var.test(dist.last.infl ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+# 
+# print("Height at last inflection")
+# var.test(height.last.infl ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+# 
+# print("Acceleration at last inflection")
+# var.test(bw.accel.last.infl ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+# 
+# print("Y-Z angle at  last inflection")
+# var.test(yz.angle.last.infl ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+# 
+# print("Distance to leave at start of descent")
+# var.test(dist.str.dscnt ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+# 
+# print("Height at start of descent")
+# var.test(height.strt.dscnt ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+# 
+# print("Acceleration to leave at start of descent")
+# var.test(bw.accel.dscnt ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+# 
+# print("X-Y angle at start of descent")
+# var.test(xy.angle.dscnt ~ leave.type, summ.traj3, 
+#          alternative = "two.sided")
+
+# library(qgraph)
+# 
+# dis.point <- vegdist(summ.traj3[summ.traj3$leave.type == 1, -1], method = "euclidean")
+# 
+# qgraph(dis.point, layout='spring', vsize=3, title = "Pointy leaf tip flight similarity")
+# 
+# dis.trunc <- vegdist(summ.traj3[summ.traj3$leave.type == 2, -1], method = "euclidean")
+# 
+# qgraph(dis.trunc, layout='spring', vsize=3, title = "Truncaded leaf tip flight similarity")
+# 
+# dis.trunc2 <- vegdist(summ.traj3[summ.traj3$leave.type == 2, -1][1:attributes(dis.point)$Size, ], method = "euclidean")
+# 
+# qgraph(dis.trunc2, layout='spring', vsize=3, title = "Truncaded leaf tip flight similarity")
+
+```
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *Significant differences in mulitivariate dispersion of flight trajectories: flight towards truncated leaves are more variable*
+
+</div>
+
+&nbsp;
+
+```{r DFA on pca, eval = FALSE, echo = FALSE}
+## Linear discriminant function analysis on PCs
+
+# rf <- ranger(leave.type ~ ., data = summ.traj3, num.trees = 10000, importance = "impurity")
+
+print("variables")
+names(summ.traj3)
+
+traj.pca <- data.frame(leave.type = summ.traj3$leave.type, pca.trans$scores[, 1:5])
+
+# try varimax
+
+dfa <- lda(leave.type ~ ., data = traj.pca, CV = TRUE)
+  df.error <-  1- sum(diag(table(traj.pca$leave.type, dfa$class, dnn = c('Actual Group','Predicted Group')))) / nrow(traj.pca)
+
+pboptions(type = "none")
+  
+rnd.error <- pbsapply(1:10000, cl = 3, function(x){
+
+  Y <- traj.pca
+
+  Y$leave.type <- sample(Y$leave.type)
+
+  dfa <- lda(leave.type ~ ., data = Y, CV = TRUE)
+  df.error <-  1- sum(diag(table(Y$leave.type, dfa$class, dnn = c('Actual Group','Predicted Group')))) / nrow(Y)
+
+  return(df.error)
+  }
+  )
+
+print("DFA error")
+df.error
+
+
+# abline(v = df.error, col = "red", lty = 2)  
+
+#p value
+
+print("p-value")
+sum(rnd.error < df.error) / length(rnd.error)
+
+
+#   # discriminant function
+ dfa <- lda(leave.type ~ ., data = traj.pca)
+
+
+ print("Mean value per leave type")
+  
+ dfa$means 
+
+```
+
+```{r, mean plots pca, eval = FALSE, echo = FALSE}
+
+### Mean  +/- SD of leaf shape variables
+
+summ.gat <- tidyr::gather(traj.pca, key = "variable", value = "value", names(traj.pca)[-1])
+
+agg.m <- aggregate(value ~ variable + leave.type, data = summ.gat, mean)
+agg.m$sd <- aggregate(value ~ variable + leave.type, data = summ.gat, sd)$value
+
+ggplot(agg.m, aes(leave.type, value, col = leave.type)) +
+  geom_point(size = 2) +
+  geom_errorbar( aes(ymin = value - sd, ymax = value + sd), width = 0.3) +
+  scale_color_manual(values = cols[c(2, 9)]) +
+  facet_wrap(~variable) +
+  theme_classic()
+  
+
+```
+
+```{r, eval = FALSE, echo = FALSE}
+
+imp <- data.frame(variable = names(rf$variable.importance), importance = rf$variable.importance)
+
+imp$variable <- factor(imp$variable, levels = imp$variable[order(imp$importance)])
+
+ggplot(data = imp, aes(x = variable, y = importance)) + 
+  geom_bar(fill = cols[5], stat = "identity") +
+  theme_classic() +
+  # facet_wrap(~clade, nrow = 2, scales = "free") +
+ # geom_errorbar(aes(ymin = importance - imp.sd, ymax = importance + imp.sd), colour=inferno(10)[5], width=.1) +
+  coord_flip() 
+
+ggplot(summ.traj2, aes(leave.type, height.last.infl)) + 
+    geom_violin(fill = cols[3]) + theme_classic() 
+
+#   # discriminant function
+ dfa <- lda(leave.type ~ ., data = summ.traj3)
+ 
+ dfa$means 
+ 
+ dfa$scaling
+ 
+ dfa$scaling
+  plda = predict(object = dfa, # predictions
+               newdata = summ.traj3[, -1])
+
+
+pca <- princomp(summ.traj3[, -1])  
+    
+dat <- data.frame(summ.traj3, pca$scores)
+
+ggplot(data = dat, aes(Comp.1, Comp.2, col = leave.type)) +
+  geom_point()
+
+```
+
+## Random forest (and randomization test) on leaf shape among species
+```{r rf leaf shape, eval = FALSE, echo = FALSE}
+
+lvs.msrs <- readxl::read_excel("Leaf measures.xls")  
+
+pp <- preProcess(x = as.matrix(lvs.msrs[, -1]), method=c("center", "scale", "BoxCox", "corr"))
+
+trans.lvs.msrs <- data.frame(Species = lvs.msrs$Species, predict(pp, as.matrix(lvs.msrs[, - 1])), stringsAsFactors = FALSE)
+
+trans.lvs.msrs$Species[trans.lvs.msrs$Species == 2] <- "Calathea lutea"
+# trans.lvs.msrs$rdn.var <- rnorm(nrow(trans.lvs.msrs))
+
+lvs.rf <- ranger(Species ~ ., data = trans.lvs.msrs, num.trees = 10000, importance = "permutation", keep.inbag = TRUE)
+
+prx.mat <- extract_proximity_oob(fit = lvs.rf, olddata = trans.lvs.msrs)
+
+diss <- dist(t(prx.mat))   ## Euclidean distances 
+fit <- mds(diss, ndim = 2)        ## 2D interval MDS
+
+set.seed(123)
+rf.mds <- bootmds(fit, prx.mat, method.dat = "euclidean", nrep = 50)
+
+pboptions(type = "timer")
+  
+rnd.error <- pbsapply(1:10000, cl = 3, function(x){
+
+  Y <- trans.lvs.msrs
+
+  Y$Species <- sample(Y$Species)
+
+  rf <- ranger(Species ~ ., data = Y, num.trees = 10000, importance = "none")
+
+  rf.error <- rf$prediction.error
+
+  return(rf.error)
+  }
+  )
+
+rf.random.res <- list(rf.error = lvs.rf$prediction.error, rnd.error = rnd.error, rf.model = lvs.rf, prx.mat = prx.mat, rf.mds = rf.mds, trans.lvs.msrs = trans.lvs.msrs)
+
+saveRDS(rf.random.res, "Random forest leaf shape randomization test results.RDS")
+
+```
+
+```{r, eval = TRUE, echo = FALSE, fig.width = 8}
+
+rf.random.res <- readRDS("Random forest leaf shape randomization test results.RDS")
+
+print("Random forest error")
+(rf.error <- rf.random.res$rf.error)
+
+rnd.error <- rf.random.res$rnd.error
+
+hist(rf.random.res$rnd.error, main = " Random error 10000 iterations", col = cols[5], xlab = "Classification error", xlim = c(0, 0.8))
+abline(v = rf.error, col = cols[9], lty = 2, lwd = 3)  
+
+#p value
+print("p-value")
+sum(rnd.error < rf.error) / length(rnd.error)
+
+
+```
+
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *H. imbricata and C. lutea differ significantly in leaf shape*
+
+</div>
+
+&nbsp;
+
+# Leaf shape space based on Random Forest proximity
+
+```{r leaf shape space RF, eval = TRUE, echo = FALSE, fig.width = 10}
+
+mds.shp <- data.frame(Species = rf.random.res$trans.lvs.msrs$Species, rf.random.res$rf.mds$conf, stringsAsFactors = FALSE)
+
+mds.shp$Species[mds.shp$Species == 2] <- "Calathea lutea"
+
+ggplot(mds.shp, aes(x = D1, y = D2, color = Species, shape = Species)) +
+ geom_point(size = 6)+
+  scale_color_manual(values = viridis(10, alpha = 0.7)[c(3, 8)]) +
+  theme_classic() +
+  labs(x = "Dimension 1", y = "Dimension 2") +
+  theme(text = element_text(size=20)) 
+  
+```
+
+#### Colinearity
+
+```{r colinearity leaf shape, eval = TRUE, echo = FALSE, fig.width = 12, fig.height = 12}
+
+lvs.msrs <- readxl::read_excel("Leaf measures.xls")  
+
+cm <- cor(lvs.msrs[,sapply(lvs.msrs, is.numeric)])
+
+corrplot.mixed(cm, lower = "number", upper = "ellipse", tl.col = "black", lower.col = cols, upper.col = cols, tl.pos = "lt", tl.cex = 1.4)
+
+```
+
+
+
+### Random forest variable importance 
+```{r, eval = TRUE, echo = FALSE}
+
+imp <- data.frame(var = names(ranger::importance(rf.random.res$rf.model)), imp = ranger::importance(rf.random.res$rf.model), stringsAsFactors = FALSE)
+
+imp <- imp[order(-imp$imp), ]
+
+imp$var <- factor(imp$var, levels = imp$var[order(imp$imp)])
+
+ggplot(imp, aes(x = var, y = imp)) + 
+  geom_bar(stat = "identity", fill = viridis(10)[6] ) +
+  theme_classic() +
+  labs(x = "Random forest importance", y = "Variable") +
+  coord_flip()
+
+```
+
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *Most important variables: tip circunference and ratio of tip length to circunference*
+
+</div>
+
+&nbsp;
+
+
+### Models comparing single morphological variables between plant species
+
+Bayesian MCMC generalized linear models were used to compare morphological variables between *H. imbricata* and *C. lutea* . We run one model for each parameter and compared it to a intercept-only (null) model: 
+
+1. leaf length:
+$$Leaf\ length \sim species $$
+
+1. Tip length:
+$$Tip\ length \sim species $$
+
+1. Tip circumference:
+$$Tip\ circumference \sim species $$
+
+1. Tip to circumference ratio:
+$$Tip\ to\ circumference\ ratio \sim species $$
+
+1. Roost height:
+$$Roost\ height \sim species $$
+
+
+*only models that differed in 4 AICc units from the null model were evaluated*
+
+```{r mcmcglmm models leaf shape, eval = FALSE, echo = FALSE}
+
+# define parmeters for MCMCglmm models
+itrns <- 300000
+burnin <- 3000
+thin <- 300
+
+
+X <- rf.random.res$trans.lvs.msrs
+
+prms <- names(X)[-1]
+
+# Selecting between with and without interaction
+mods.leaf.var <- pblapply(prms, cl = 3, function(x){  
+ 
+  # replicate each one 3 times
+  m.sp <- replicate(3, MCMCglmm(formula(paste(x, " ~ Species")), data = X, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), burnin = burnin, thin = thin), simplify = FALSE)
+
+  m.null <- replicate(3, MCMCglmm(formula(paste(x, " ~ 1")), data = X, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), burnin = burnin, thin = thin), simplify = FALSE)
+  
+  ms <- model.sel(m.sp[[1]], m.null[[1]], rank="DIC")
+  
+  rownames(ms) <-  gsub("[[1]]", "",rownames(ms), fixed = TRUE)
+  
+  mds <- list(model.tab = ms, m.sp = m.sp, m.null = m.null)
+
+  return(mds)
+})
+
+names(mods.leaf.var) <- prms
+
+saveRDS(mods.leaf.var, "MCMCglmm models leaf shape parameters.RDS")
+
+
+
+```
+
+### Model selection results:
+
+```{r mod sel leaf shape, eval = TRUE, echo = FALSE, results='asis'}
+
+mods.leaf.var <- readRDS("MCMCglmm models leaf shape parameters.RDS")
+
+# put all model selection results in a list
+mod.list <- lapply(1:length(mods.leaf.var), function(i)  data.frame(response = names(mods.leaf.var)[i], predictors = rownames(mods.leaf.var[[i]][[1]]), mods.leaf.var[[i]][[1]], stringsAsFactors = FALSE))
+
+# make a data frame with all results
+mod.sel.tab <- do.call(rbind, mod.list)
+
+# fix predictor names
+mod.sel.tab$predictors <- gsub("m.", "",  mod.sel.tab$predictors)
+
+mod.sel.tab$predictors <- gsub("sp", "species",  mod.sel.tab$predictors)
+
+options(knitr.kable.NA = '')
+
+df1 <- knitr::kable(mod.sel.tab[, c("response", "predictors", "df", "logLik", "DIC", "delta", "weight")], row.names = FALSE, escape = FALSE, format = "html")
+
+df1 <- row_spec(df1, which(mod.sel.tab$delta== 0), background = adjustcolor(cols[9], alpha.f = 0.3))
+  
+kable_styling(df1, bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE, font_size = 12)
+
+```
+
+Select the best model for each parameter and extract effect sizes:
+```{r sel model, eval = TRUE, echo = FALSE}
+
+# select best models based on BIC
+best.mods.leaf.var <- lapply(mods.leaf.var, function(X){ 
+  
+  # if best model was at least 2 BIC units higher than null
+  if (X[[1]]["m.null", "delta"] > 2) return(X[[rownames(X[[1]])[1]]][[1]]) else
+      return(NA) # else if models were as good as null model return NA
+  })
+
+# rename
+names(best.mods.leaf.var) <- names(mods.leaf.var)
+
+# remove the NA ones (the ones in which the null model was the best)
+best.mods.leaf.var <- best.mods.leaf.var[sapply(best.mods.leaf.var, class) == "MCMCglmm"]
+  
+# extract fixed effect size
+out <- lapply(1:length(best.mods.leaf.var), function(x){
+  
+  # fixed effects
+  fe <- summary(best.mods.leaf.var[[x]])$solutions
+
+  # Confidence intervals
+  ci <- HPDinterval(best.mods.leaf.var[[x]]$Sol)
+  
+  # put results together in a data frame
+  res <- data.frame(
+    stringsAsFactors = FALSE, 
+    # response variable name
+    response = names(best.mods.leaf.var)[x], 
+    # predictor name
+    predictor = rownames(ci)[2:nrow(ci)], 
+    effect_size = fe[-1, "post.mean"], 
+    # lower confident interval
+    CI_2.5 = ci[2:nrow(ci), 1], 
+    # upper confident interval
+    CI_97.5 = ci[2:nrow(ci), 2], 
+    # p value
+    pMCMC  = fe[-1, "pMCMC"], 
+    #intercept
+    intercept = fe[1, "post.mean"]
+    )
+  
+ return(res)
+})
+
+# put effect sizes in a single data frame 
+es.leaf.shp <- do.call(rbind, out)
+rownames(es.leaf.shp) <- 1:nrow(es.leaf.shp)
+
+```
+
+&nbsp;
+
+```{r effect sizes leaf shape parameters, eval = TRUE, echo = FALSE}
+
+md <- es.leaf.shp[, !grepl("mean|sd", names(es.leaf.shp))]
+
+md$CI_2.5 <- round(md$CI_2.5, 4)
+md$CI_97.5 <- round(md$CI_97.5, 4)
+
+#exlude only sex
+# md <- md[md$predictor != "sexM", ]
+
+# get the ones that do not overlap with 0
+mltp <- md$CI_2.5 * md$CI_97.5
+
+md$CI_2.5 <- ifelse(mltp > 0, cell_spec(md$CI_2.5, "html", color ="white", background = cols[7], bold = T,  font_size = 12),  cell_spec(md$CI_2.5, "html"))
+
+md$CI_97.5 <- ifelse(mltp > 0, cell_spec(md$CI_97.5, "html", color ="white", background = cols[7], bold = T,  font_size = 12),  cell_spec(md$CI_97.5, "html"))
+
+df1 <- knitr::kable(md, row.names = FALSE, escape = FALSE, format = "html", digits = c(4))
+
+df1 <- row_spec(df1, which(mltp > 0), background = adjustcolor(cols[9], alpha.f = 0.3))
+  
+kable_styling(df1, bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE, font_size = 12)
+
+```
+
+&nbsp;
+
+```{r plots indiv shape variables, eval = TRUE, echo = FALSE, fig.width=10, fig.height=10}
+
+lvs.msrs <- readxl::read_excel("Leaf measures.xls")  
+
+
+lvs.msrs$Species[lvs.msrs$Species == 2] <- "Calathea lutea"
+
+lvs.msrs.gat <-gather(lvs.msrs, key = "variable", value = "value", names(lvs.msrs)[-1])
+
+lvs.msrs.gat$Species <-  ifelse(lvs.msrs.gat$Species == "Calathea lutea", "C. lutea", "H. imbricata")
+
+used.vars <- gsub("\\.", " ",  names(rf.random.res$trans.lvs.msrs))
+
+lvs.msrs.gat <- lvs.msrs.gat[lvs.msrs.gat$variable %in% used.vars,]
+
+lvs.msrs.gat$variable[lvs.msrs.gat$variable == "Ratio of tip length to circumference"] <- "Tip length/circumference"
+
+
+sig <- data.frame(variable = unique(lvs.msrs.gat$variable), label = c("", "", "*", "*", ""), x = rep(1.5, 5), y = c(0, 0, 42, 1, 0))
+  
+agg.msrs <- aggregate(value ~ Species + variable, data = lvs.msrs.gat, FUN = mean)
+
+
+ggplot(lvs.msrs.gat, aes(x = Species, y = value)) + 
+  geom_violin(fill =cols[7]) + 
+   geom_point(size = 5, data = agg.msrs, aes(x = Species, y = value), col = "black", pch = 21, fill = "white") +
+  geom_text(col = "black", size = 12, data = sig, mapping = aes(x = x, y = y, label = label)) +
+  facet_wrap(~ variable, nrow = 2, scales = "free_y") +
+  theme_classic() +
+  theme(text = element_text(size=20)) 
+
+```
+
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *Tip circumference and ratio of tip length to circumference differ significantly between H. imbricata and C lutea*
+
+- *Tip circumference is larger in C lutea while ratio of tip length to circumference is larger H. imbricata*
+
+</div>
+
+&nbsp;
+
+```{r, eval = FALSE, echo = FALSE}
+## Species preference COMPANA
+
+sp.pref <- read.csv("leave_preference_data.csv", stringsAsFactors = FALSE)
+
+table(sp.pref$Lugar)
+
+names(sp.pref)
+
+
+usadas <- sp.pref[, c("him.usadas", "clu.usadas", "otros.usadas")]
+disp <- sp.pref[, c("him.disponibles", "clu.disponibles", "otros.disponible")]
+
+
+names(disp) <- names(usadas) <- c("Him", "Clu", "otros")
+
+pref <- compana(usadas, disp, test = "randomisation")
+
+pref
+
+
+print(pref$rm, quote = FALSE)
+
+sp.pref <- sp.pref[sp.pref$Lugar %in%  c("Esquinas", "Finca Km23", "Lecheria", "Naranjal", "Urena"), ]
+
+### aggregating
+sp.pref.agg <- aggregate(cbind(him.usadas, clu.usadas, otros.usadas, him.disponibles, clu.disponibles, otros.disponible)  ~ Lugar, data = sp.pref,  FUN = sum)
+
+
+usadas <- sp.pref.agg[, c("him.usadas", "clu.usadas", "otros.usadas")]
+disp <- sp.pref.agg[, c("him.disponibles", "clu.disponibles", "otros.disponible")]
+
+
+
+names(disp) <- names(usadas) <- c("Him", "Clu", "otros")
+
+pref <- compana(usadas, disp, test = "randomisation", alpha =  0.05, nrep = 10000)
+
+print(pref$rm, quote = FALSE)
+
+(pref)
+
+
+# sin otros
+pref <- compana(usadas[, -3], disp[, -3], test = "randomisation", alpha =  0.05, nrep = 10000)
+
+print(pref$rm, quote = FALSE)
+
+(pref)
+
+
+df.pref <- data.frame(species = rep(c("H. imbricata", "C. lutea", "Others"), each = 5), site = rep(sp.pref.agg$Lugar, 3), used = unlist(usadas), available = unlist(disp))
+
+agg.df.pref <- aggregate(cbind(used, available) ~ species, data = df.pref, FUN = sum)
+
+agg.df.pref$site <- "All"
+
+df.pref <- rbind(df.pref, agg.df.pref)
+
+df.pref.gg <- data.frame(df.pref[, c("species", "site")], type = rep(c("used", "available"), each = nrow(df.pref)), count = c(df.pref$used, df.pref$available), stringsAsFactors = FALSE, row.names = NULL)
+
+df.pref.gg[order(df.pref.gg$species,  df.pref.gg$type, df.pref.gg$site), ]
+
+
+df.pref.gg$species <- factor(df.pref.gg$species, levels = unique(df.pref.gg$species))
+
+ggplot(df.pref.gg, aes(species, count, fill = type)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = viridis(10)[c(3, 8)]) +
+  facet_wrap(~site, scales = "free_y") +
+  theme_classic() +
+  labs(x = "Species", y = "Frequency") +
+  theme(legend.justification=c(0,0), legend.position=c(0.87, 0.8), text = element_text(size=20)) 
+
+  
+ggsave(filename = "available_and_used_leaves.jpeg", dpi = 100, width = 20 * 1.7, height = 20, units = "cm")
+
+# pref$random.res
+
+```
+
+## MCMCglmm models preference (binomial)
+
+### Correlation among variables
+```{r prepare data for mcmcglmm, eval = TRUE, echo = FALSE}
+
+sp.pref <- read.csv("leave_preference_data.csv", stringsAsFactors = FALSE)
+
+sp.pref <- sp.pref[sp.pref$clu.disponibles != 0 & sp.pref$him.disponibles != 0, ]
+
+usadas <- sp.pref[, c("him.usadas", "clu.usadas", "otros.usadas")]
+disp <- sp.pref[, c("him.disponibles", "clu.disponibles", "otros.disponible")]
+
+use.df <- data.frame(site = sp.pref$Lugar, disp = unlist(disp, use.names = FALSE), used = unlist(usadas, use.names = FALSE), area = sp.pref$area, densidad = sp.pref$Densidad, species = rep(c("Him", "Clu", "other"), each = nrow(sp.pref)))
+
+# Selecting between with and without interaction
+X <- use.df
+X <- X[complete.cases(X), ]
+X <- X[X$species != "other", ]
+X <- droplevels(X)
+
+levels(X$species) <- c("C. lutea", "H. imbricata")
+
+cm <- cor(X[,sapply(X, is.numeric)])
+
+corrplot.mixed(cm, lower = "number", upper = "ellipse", tl.col = cols, lower.col = cols, upper.col = cols)
+
+agg.dens <- aggregate(densidad ~ species, data = X, mean)
+
+
+ggplot(X, aes(x = species, y = densidad)) + geom_violin(fill =cols[5]) + 
+   geom_point(size = 6, data = agg.dens, fill = "white", pch = 21, col = "black") +
+  theme_classic() +
+  labs(y = "Density") +
+  theme(text = element_text(size=20)) 
+ 
+```
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *Area and density highly correlated; area was excluded*
+
+- *Variation in density very similar between C. luthea and H. imbricata so no interaction between density and species was included*
+
+</div>
+
+&nbsp;
+
+### Models on species preference
+
+Bayesian MCMC generalized linear mixed models were used to fit binomial models on furled leaf occupancy with site as a random effect and plant species and density as predictors. We tested 4 models: 
+
+1. only species as predictor:
+$$Occupancy \sim species + (1 | site)$$
+1. only density as predictor: 
+$$Occupancy \sim density + (1 | site)$$
+
+1. both species and density as predictors: 
+$$Occupancy \sim species + density + (1 | site)$$
+
+1. A intercept-only (null) model: 
+$$Occupancy \sim 1 + (1 | site)$$
+
+
+
+- *Only sampling events in which furled leaves from both species were found are included*
+- *Models were created with a multinomial link function*
+
+```{r  run mcmcglmm occup, eval = FALSE, echo = FALSE}
+
+# see https://stat.ethz.ch/pipermail/r-sig-mixed-models/2010q3/004481.html
+
+# define parmeters for MCMCglmm models
+itrns <- 300000
+burnin <- 3000
+thin <- 300
+
+prior1=list(R=list(V=1, nu=0.002), G=list(G1=list(V=1, nu=0.002)))
+
+# replicate each one 3 times
+mod.sp.dns <- replicate(3, MCMCglmm(cbind(used, disp - used) ~ species + densidad, random = ~ site, data = X, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), family = "multinomial2", singular.ok = TRUE, burnin = burnin, thin = thin), simplify = FALSE)
+
+mod.sp <- replicate(3, MCMCglmm(cbind(used, disp - used) ~ species, random = ~ site, data = X, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), family = "multinomial2", singular.ok = TRUE, burnin = burnin, thin = thin), simplify = FALSE)
+
+mod.dns <- replicate(3, MCMCglmm(cbind(used, disp - used) ~ densidad, random = ~ site, data = X, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), family = "multinomial2", singular.ok = TRUE, thin = thin), simplify = FALSE)
+
+m.null <- replicate(3, MCMCglmm(cbind(used, disp - used) ~ 1, random = ~ site, data = X, verbose = FALSE, nitt = itrns,  start = list(QUASI = FALSE), family = "multinomial2", singular.ok = TRUE, burnin = burnin, thin = thin), simplify = FALSE)
+
+ms <- model.sel(mod.sp.dns[[1]], mod.sp[[1]], mod.dns[[1]], m.null[[1]], rank="DIC")
+
+rownames(ms) <-  gsub("[[1]]", "",rownames(ms), fixed = TRUE)
+
+occ.mds <- list(model.tab = ms, mod.sp.dns = mod.sp.dns[[1]], mod.sp = mod.sp[[1]], mod.dns = mod.dns[[1]], m.null = m.null[[1]])
+
+saveRDS(occ.mds, "MCMCglmm_models_leave_occupancy_complete_dataset.RDS")
+
+all.occ.mds <- list(mod.sp.dns = mod.sp.dns, mod.sp = mod.sp, mod.dns = mod.dns, m.null = m.null)
+
+saveRDS(all.occ.mds, "All_replicates_MCMCglmm_models_leave_occupancy_complete_dataset.RDS")
+
+```
+
+```{r  mcmcglmm all data results, eval = TRUE, echo = FALSE}
+
+occ.mds <- readRDS("MCMCglmm_models_leave_occupancy_complete_dataset.RDS")
+
+print("best model")
+occ.mds$model.tab
+
+
+#'Best' model
+m1 <- (get.models(occ.mds$model.tab, rownames(occ.mds$model.tab)[1])[[1]])
+
+m1$Fixed$formula
+
+# fixed effects
+fe.m1 <- summary(m1)$solutions
+
+print("effect size")
+
+fe.m1
+
+print("Confidence intervals")
+ci.m1 <- HPDinterval(m1$Sol)
+
+ci.m1
+
+print("second 'Best' model")
+m2 <- (get.models(occ.mds$model.tab, rownames(occ.mds$model.tab)[2])[[1]])
+
+m2$Fixed$formula
+
+# fixed effects
+fe.m2 <- summary(m2)$solutions
+
+print("effect size")
+
+fe.m2
+
+print("Confidence intervals")
+ci.m2 <- HPDinterval(m2$Sol)
+ci.m2
+```
+
+
+```{r occupancy graph, eval = TRUE, echo=FALSE}
+
+X$occupancy <- X$used / X$disp
+
+agg.occ <- aggregate(occupancy ~ species, data = X[!is.na(X$occupancy),], mean)
+
+ggplot(X, aes(x = species, y = occupancy)) + 
+  geom_violin(fill = cols[8]) + 
+ geom_point(size = 6, data = agg.occ, fill = "white", pch = 21, col = "black") +
+  labs(x = "Species", y = "Proportion used/available leaves") +
+  theme_classic() +
+  theme(text = element_text(size=20)) 
+
+
+```
+
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *Best model included species and density as predictors*
+
+- *However, only species significantly explained variation in occupancy (i.e. proportion of used leaves)*
+
+</div>
+
+&nbsp;
+
+### Fails to entry leaf
+```{r  fails prepare data, eval = TRUE, echo = FALSE}
+
+fails <- read.table("Fails.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+leaf.type <- read_excel("Entrada tubo Thyroptera.xlsx")
+
+names(leaf.type)[1] <- "File"
+
+fails <- merge(fails, leaf.type, all.x = TRUE)
+
+fails$Hoja[is.na(fails$Hoja) & fails$Leaf == "A"] <- 1
+fails$Hoja[is.na(fails$Hoja) & is.na(fails$Leaf)] <- 2
+
+fails$Hoja[fails$Hoja == 1] <- "Pointy"
+fails$Hoja[fails$Hoja == 2] <- "Truncated"
+
+fails$Fail[fails$Fail > 1] <- 1
+
+fails$Fail <- as.factor(fails$Fail)
+fails$leaf.type <- as.factor(fails$Hoja)
+
+fails <- fails[order(fails$leaf.type, decreasing = TRUE), ]
+
+
+```
+
+```{r  fails model, eval = FALSE, echo = FALSE}
+
+# define parmeters for MCMCglmm models
+itrns <- 300000
+burnin <- 3000
+thin <- 300
+
+# prior for effect models
+prior.m2c.4 <- list(B = list(mu = c(0, 0), V = diag(2) *     (1 + pi^2/3)), R = list(V = 1, fix = 1))
+
+# prior for null model
+prior.m2c.5 <- list(B = list(mu = c(0), V = diag(1) * (1 + pi^2/3)), R = list(V = 1, fix = 1))
+
+
+mod.fail <- replicate(3, MCMCglmm(Fail ~ leaf.type - 1, data = fails, family = "categorical", prior = prior.m2c.4, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), burnin = burnin, thin = thin), simplify = FALSE)
+
+m.null <- replicate(3, MCMCglmm(Fail ~ 1, data = fails, family = "categorical", prior = prior.m2c.5, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), burnin = burnin, thin = thin), simplify = FALSE)
+
+ms <- model.sel(mod.fail[[1]], m.null[[1]], rank="DIC")
+
+rownames(ms) <-  gsub("[[1]]", "",rownames(ms), fixed = TRUE)
+
+prd <- predict(mod.fail[[1]], interval = "confidence")
+
+p.val <- sum(mod.fail[[1]]$Sol[, 2] - mod.fail[[1]]$Sol[, 1] < 0) / nrow(mod.fail[[1]]$Sol)
+
+fail.res <- list(model.tab = ms, mod.fail = mod.fail[[1]], m.null = m.null[[1]], prd = prd, p.val = p.val)
+
+saveRDS(fail.res, "Fail_entry_mcmcglmm_model.RDS")
+
+
+all.fail.mods <- list(mod.fail = mod.fail, m.null = m.null)
+
+saveRDS(all.fail.mods, "All_models_fail_entry_mcmcglmm_model.RDS")
+
+```
+
+```{r fail entry models, eval = TRUE, echo= FALSE}
+
+fail.res <- readRDS("Fail_entry_mcmcglmm_model.RDS")
+
+fail.mod <- fail.res$mod.fail
+prd <- fail.res$prd
+
+summary(fail.mod)
+
+HPDinterval(plogis(fail.mod$Sol))
+# chi-2
+# chisq.test(fails$leaf.type, fails$Fail)
+
+# summary(fail.mod)$solutions
+# prd <- fail.res$prd
+# prd[which.min(fails$leaf.type == "Truncated"), ]
+print("P-value glmm")
+fail.res$p.val
+
+fails$Fail2 <- as.numeric(as.character(fails$Fail))
+agg <- aggregate(Fail2 ~ leaf.type, data = fails, FUN = mean)
+
+ggplot(agg, aes(x = leaf.type, y = Fail2)) +
+  geom_bar(stat = "identity", fill = cols[c(3,8)]) +
+  theme_classic() +
+  labs(x = "Leaf type", y = "Observed proportion of failed attempts") +
+   theme(text = element_text(size=20)) 
+ 
+# posterior distribution of probability to fail entry
+post.df <- data.frame(leaf.type = rep(c("Truncated", "Pointy"), nrow(fail.mod$Sol)), prob.fail = c(plogis(fail.mod$Sol[,1]), plogis(fail.mod$Sol[,2])))
+
+
+ggplot(post.df) +
+  geom_density( aes(x= prob.fail, y=..scaled.., fill=leaf.type))+
+  scale_fill_manual(values = adjustcolor(cols[c(3,8)], alpha.f = 0.6)) +
+  theme_classic() +
+  labs(x = "Leaf type", y = "Estimadted posterior probability of failed attempts") +
+   theme(text = element_text(size=20)) 
+  
+## https://cran.r-project.org/web/packages/MCMCglmm/vignettes/CourseNotes.pdf
+# treatment <- gl(2, 25)
+# y <- rbinom(50, 1, c(0.5, 0.001)[treatment])
+# data.bin <- data.frame(treatment = treatment, y = y)
+# 
+# 
+# m2c.4 <- MCMCglmm(y ~ treatment - 1, data = data.bin, family = "categorical", prior = prior.m2c.4, verbose = FALSE) 
+# 
+# summary(m2c.4)
+# 
+# plot(m2c.4$Sol)
+# 
+# 
+# predict(m2c.4, interval = "confidence")
+
+```
+
+&nbsp; 
+
+<div class="alert alert-info">
+
+- *There is no significant diference in the probabilty of failing to enter the roost between truncaded and pointy leaves*
+
+</div>
+
+&nbsp;
+
+---
+
+---
+
+# Diagnostic plots for MCMCglmm models
+
+Include MCMC chain trace, autocorrelation plots and Gelman/Rubin's convergence diagnostic:
+
+### Leaf occupancy
+```{r diagnostic plots MCMCglmm occupancy, eval = F, echo = FALSE, fig.height= 7}
+
+all.occ.mds <- readRDS("All_replicates_MCMCglmm_models_leave_occupancy_complete_dataset.RDS")
+
+
+for(x in 1:length(all.occ.mds)){
+  
+  print(names(all.occ.mds)[[x]])
+
+  X <- all.occ.mds[[x]]
+    
+  mcmc.l <- mcmc.list(X[[1]]$Sol, X[[2]]$Sol, X[[3]]$Sol)
+    
+    plot(mcmc.l[[1]], col = cols[1])
+  
+    plot(mcmc.l[[2]], col = cols[5])
+    
+    plot(mcmc.l[[3]], col = cols[7])
+    
+    print("Combining the 3 independent chains")
+
+    plot(mcmc.l, col = cols[c(1, 5, 7)])
+    
+    autocorr.plot(mcmc.l[[1]], col = cols[1], lwd = 3, ask = FALSE)
+    
+    autocorr.plot(mcmc.l[[2]], col = cols[5], lwd = 3, ask = FALSE)
+    
+    autocorr.plot(mcmc.l[[3]], col = cols[7], lwd = 3, ask = FALSE)
+    
+    print("Gelman and Rubin's convergence diagnostic")
+    
+    print(gelman.diag(mcmc.l))
+  }
+
+
+```
+
+### Leaf shape models
+```{r diagnostic plots MCMCglmm Leaf shape models, eval = F, echo = FALSE, fig.height= 7}
+
+mods.leaf.var <- readRDS("MCMCglmm models leaf shape parameters.RDS")
+
+
+for(x in 1:length(mods.leaf.var)){
+  
+  print(names(mods.leaf.var)[[x]])
+
+  Y <- mods.leaf.var[[x]][2:3]
+   
+  for (i in 1:length(Y))
+  {
+    print(names(Y)[i])
+    
+    X <- Y[[i]]
+    
+  mcmc.l <- mcmc.list(X[[1]]$Sol, X[[2]]$Sol, X[[3]]$Sol)
+    
+    plot(mcmc.l[[1]], col = cols[1])
+  
+    plot(mcmc.l[[2]], col = cols[5])
+    
+    plot(mcmc.l[[3]], col = cols[7])
+    
+    print("Combining the 3 independent chains")
+
+    plot(mcmc.l, col = cols[c(1, 5, 7)])
+    
+    autocorr.plot(mcmc.l[[1]], col = cols[1], lwd = 3, ask = FALSE)
+    
+    autocorr.plot(mcmc.l[[2]], col = cols[5], lwd = 3, ask = FALSE)
+    
+    autocorr.plot(mcmc.l[[3]], col = cols[7], lwd = 3, ask = FALSE)
+    
+    print("Gelman and Rubin's convergence diagnostic")
+    
+    print(gelman.diag(mcmc.l))
+  }
+}
+
+```
+
+### Leaf entry failure
+```{r diagnostic plots MCMCglmm entry failure, eval = F, echo = FALSE, fig.height= 7}
+
+all.fail.mods <- readRDS("All_models_fail_entry_mcmcglmm_model.RDS")
+
+
+for(x in 1:length(all.fail.mods)){
+  
+  print(names(all.fail.mods)[[x]])
+
+  X <- all.fail.mods[[x]]
+    
+  mcmc.l <- mcmc.list(X[[1]]$Sol, X[[2]]$Sol, X[[3]]$Sol)
+    
+    plot(mcmc.l[[1]], col = cols[1])
+  
+    plot(mcmc.l[[2]], col = cols[5])
+    
+    plot(mcmc.l[[3]], col = cols[7])
+    
+    print("Combining the 3 independent chains")
+
+    plot(mcmc.l, col = cols[c(1, 5, 7)])
+    
+    autocorr.plot(mcmc.l[[1]], col = cols[1], lwd = 3, ask = FALSE)
+    
+    autocorr.plot(mcmc.l[[2]], col = cols[5], lwd = 3, ask = FALSE)
+    
+    autocorr.plot(mcmc.l[[3]], col = cols[7], lwd = 3, ask = FALSE)
+    
+    print("Gelman and Rubin's convergence diagnostic")
+    
+    print(gelman.diag(mcmc.l))
+  }
+
+```
+
+## Leaf entry characterization
+```{r leaf entry characterization, eval = FALSE}
+
+entry_dat <- as.data.frame(read_excel("Thyroptera.3D.data.plus(c).xlsx"))[, c(1:6, 11)]
+
+str(entry_dat)
+
+
+agg_dat <- aggregate(`time.1-4.discs` ~ leaf.type, entry_dat, FUN = mean)
+
+ggplot(entry_dat, aes(x = leaf.type, y = `time.1-4.discs`)) +
+  geom_violin(fill = cols[8]) +
+  theme_classic(base_size = 18) +
+  labs(x = "Leaf type", y = "Time between disc 1 and disc 4 landing") +
+  geom_point(data = agg_dat, col = cols[2], size = 4)
+
+agg_dat2 <- aggregate(`time.4.discs` ~ leaf.type, entry_dat, FUN = mean)
+
+ggplot(entry_dat, aes(x = leaf.type, y = `time.4.discs`)) +
+  geom_violin(fill = cols[8]) +
+  theme_classic(base_size = 18) +
+  labs(x = "Leaf type", y = "Time between first touch and disc 4 landing") +
+  geom_dotplot(binaxis='y', stackdir='center', fill = cols[2]) 
+  # geom_point(data = agg_dat2, col = cols[2], size = 4)
+
+
+entry_dat$touches[grep("ventosa", entry_dat$touches)] <- "disc"
+entry_dat$touches[grep("disc", entry_dat$touches, invert = TRUE)] <- "body"
+
+
+table(entry_dat$touches)
+
+
+ggplot(entry_dat, aes(x = leaf.type, y = touches, fill = touches)) +
+  geom_col() +
+  scale_fill_viridis_d(begin = 0.3, end = 0.8) +
+  theme_classic(base_size = 18) +
+  labs(x = "Leaf type", y = "Time between first touch and disc 4 landing") 
+  # geom_dotplot(binaxis='y', stackdir='center', fill = cols[2]) 
+  # geom_point(data = agg_dat2, col = cols[2], size = 4)
+
+
+```
+
+
+
+---
+
+<font size="4">R session information</font>
+
+```{r session info, echo=F}
+
+sessionInfo()
+
+```

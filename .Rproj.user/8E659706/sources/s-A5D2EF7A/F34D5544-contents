@@ -1,0 +1,97 @@
+---
+title: <center><font size="6"><b>Calling activity analysis</b></font></center>
+subtitle: <center><font size="4"><b><a href="https://github.com/maRce10/flight_coordination_in_Thyroptera">Group flight coordination in Thyroptera</a></b></font></center>
+author: <center><font size="4"><a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas, PhD</a></font></center>
+date: <center>`r format(Sys.Date(), "%d-%m-%Y")`</center>
+output:
+  html_document:
+    code_folding: hide
+    toc: no
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+fontsize: 12pt 
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r packages, message = FALSE, warning = FALSE, echo = FALSE, eval = TRUE, include = FALSE}
+
+# unset github credentials
+Sys.unsetenv("GITHUB_PAT")
+
+#clean session
+rm(list = ls())
+
+# unload all non-based packages
+out <- sapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), function(x) try(detach(x, unload = FALSE, character.only = TRUE), silent = T))
+
+
+## add 'developer/' to packages to be installed from github
+x <- c("devtools", "maRce10/warbleR", "pbapply", "DT", "parallel", "viridis")
+
+aa <- lapply(x, function(y) {
+  
+  # get pakage name
+  pkg <- strsplit(y, "/")[[1]]
+  pkg <- pkg[length(pkg)]
+  
+  # check if installed, if not then install 
+  if (!pkg %in% installed.packages()[,"Package"])  {
+
+      if (grepl("/", y))  devtools::install_github(y, force = TRUE) else
+    install.packages(y) 
+    }
+
+  # load package
+  try(require(pkg, character.only = T), silent = T)
+})
+
+```
+
+```{r functions, eval = TRUE, echo = FALSE}
+
+#functions and parameters
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+
+knitr::opts_chunk$set(dpi = 50, fig.width = 12) 
+
+# ggplot2 theme
+# theme_set(theme_classic(base_size = 20))
+
+
+```
+
+```{r read data}
+
+pks <- read.csv("./data/processed/non_overlapping_peaks.csv")
+
+pks$file <- gsub(".wav", "", sapply(strsplit(as.character(pks$sound.files), "_00", fixed = TRUE), "[[", 2))
+
+count_l <- lapply(unique(pks$file), function(x){
+  
+  X <- pks[pks$file == x, ]
+  
+  return(data.frame(file_ID = x, ch1_file_name = X$sound.files[1], call_count = nrow(X)))
+  
+})
+
+call_count <- do.call(rbind, count_l)
+
+#order
+call_count <- call_count[order(call_count$file_ID), ]
+
+# print dynamic table
+datatable(call_count, editable = list(
+  target = 'row'
+), rownames = FALSE, style = "bootstrap",  filter = 'top', options = list(
+  pageLength = 300, autoWidth = TRUE, dom = 'ft'
+), autoHideNavigation = TRUE)
+
+
+
+```
+
+
+

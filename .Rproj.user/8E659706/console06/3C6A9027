@@ -26,3 +26,32 @@ Para realizar un push de la rama actual y configurar el remoto como upstream, us
 error: src refspec master does not match any.
 error: fallo el push de algunas referencias a 'https://github.com/maRce10/sex-dependent_response_calling_thyroptera.git'
 ]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git add .
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$  dit[K[K[Kgit commit -m "fis[Krst mc[K[Kcommo[Kit"
+[master (commit-raíz) dec3b58] first commit
+ 8 files changed, 182 insertions(+)
+ create mode 100644 .Rproj.user/8E659706/console06/3C6A9027
+ create mode 100644 .Rproj.user/8E659706/console06/3C6A9027.env
+ create mode 100644 .Rproj.user/8E659706/console06/INDEX001
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/lock_file
+ create mode 100644 .Rproj.user/shared/notebooks/patch-chunk-names
+ create mode 100644 Datos de respuestas_cap2.xlsx
+ create mode 100644 scripts/preliminary_analysis.R
+ create mode 100644 sex-dependent_response_calling_thyroptera.Rproj
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git add .push --set-upstream origin master[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K -u origin master[K
+fatal: La rama actual master no tiene una rama upstream.
+Para realizar un push de la rama actual y configurar el remoto como upstream, use
+
+	git push --set-upstream origin master
+
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git pushadd .push --set-upstream origin master
+Username for 'https://github.com': maRce10
+Password for 'https://maRce10@github.com': 
+Contando objetos: 17, listo.
+Delta compression using up to 4 threads.
+Comprimiendo objetos:   8% (1/12)   Comprimiendo objetos:  16% (2/12)   Comprimiendo objetos:  25% (3/12)   Comprimiendo objetos:  33% (4/12)   Comprimiendo objetos:  41% (5/12)   Comprimiendo objetos:  50% (6/12)   Comprimiendo objetos:  58% (7/12)   Comprimiendo objetos:  66% (8/12)   Comprimiendo objetos:  75% (9/12)   Comprimiendo objetos:  83% (10/12)   Comprimiendo objetos:  91% (11/12)   Comprimiendo objetos: 100% (12/12)   Comprimiendo objetos: 100% (12/12), listo.
+Escribiendo objetos:   5% (1/17)   Escribiendo objetos:  11% (2/17)   Escribiendo objetos:  17% (3/17)   Escribiendo objetos:  23% (4/17)   Escribiendo objetos:  29% (5/17)   Escribiendo objetos:  35% (6/17)   Escribiendo objetos:  41% (7/17)   Escribiendo objetos:  47% (8/17)   Escribiendo objetos:  52% (9/17)   Escribiendo objetos:  58% (10/17)   Escribiendo objetos:  64% (11/17)   Escribiendo objetos:  70% (12/17)   Escribiendo objetos:  76% (13/17)   Escribiendo objetos:  82% (14/17)   Escribiendo objetos:  88% (15/17)   Escribiendo objetos:  94% (16/17)   Escribiendo objetos: 100% (17/17)   Escribiendo objetos: 100% (17/17), 22.75 KiB | 5.69 MiB/s, listo.
+Total 17 (delta 0), reused 0 (delta 0)
+To https://github.com/maRce10/sex-dependent_response_calling_thyroptera.git
+ * [new branch]      master -> master
+Rama 'master' configurada para hacer seguimiento a la rama remota 'master' de 'origin'.
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ [K[A]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ [K[A]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git add.[K .
