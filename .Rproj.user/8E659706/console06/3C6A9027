@@ -55,3 +55,42 @@ To https://github.com/maRce10/sex-dependent_response_calling_thyroptera.git
  * [new branch]      master -> master
 Rama 'master' configurada para hacer seguimiento a la rama remota 'master' de 'origin'.
 ]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ [K[A]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ [K[A]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git add.[K .
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git commit -m "stats 1"
+[master 2fe3844] stats 1
+ 25 files changed, 2852 insertions(+), 27 deletions(-)
+ create mode 100644 .Rproj.user/8E659706/sources/prop/28652D71
+ create mode 100644 .Rproj.user/8E659706/sources/prop/41CF1908
+ create mode 100644 .Rproj.user/8E659706/sources/prop/48CC1A3C
+ create mode 100644 .Rproj.user/8E659706/sources/prop/6423C546
+ create mode 100644 .Rproj.user/8E659706/sources/prop/B70DD4B0
+ create mode 100644 .Rproj.user/8E659706/sources/prop/INDEX
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/331E372A-contents
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/3CB74D5-contents
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/48F092C2-contents
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/4DF97AF5
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/4DF97AF5-contents
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/6A2BC58A
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/6A2BC58A-contents
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/A20EE037-contents
+ create mode 100644 .Rproj.user/8E659706/sources/s-A5D2EF7A/F34D5544-contents
+ create mode 100644 .Rproj.user/shared/notebooks/E72CD5F6-Statistical analysis/1/8E659706A5D2EF7A/chunks.json
+ create mode 100644 .Rproj.user/shared/notebooks/E72CD5F6-Statistical analysis/1/s/chunks.json
+ create mode 100644 .Rproj.user/shared/notebooks/paths
+ create mode 100644 README.md
+ rename Datos de respuestas_cap2.xlsx => data/Datos de respuestas_cap2.xlsx (100%)
+ create mode 100644 scripts/Statistical analysis.Rmd
+ create mode 100644 scripts/Statistical-analysis.html
+ rewrite scripts/preliminary_analysis.R (98%)
+ create mode 100644 scripts/rsconnect/documents/Statistical analysis.Rmd/rpubs.com/rpubs/Document.dcf
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ git commit -m "stats 1"add .[Kpush --set-upstream origin master[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Kadd .[1Ppush
+Username for 'https://github.com': maRce10
+Password for 'https://maRce10@github.com': 
+Contando objetos: 40, listo.
+Delta compression using up to 4 threads.
+Comprimiendo objetos:   3% (1/33)   Comprimiendo objetos:   6% (2/33)   Comprimiendo objetos:   9% (3/33)   Comprimiendo objetos:  12% (4/33)   Comprimiendo objetos:  15% (5/33)   Comprimiendo objetos:  18% (6/33)   Comprimiendo objetos:  21% (7/33)   Comprimiendo objetos:  24% (8/33)   Comprimiendo objetos:  27% (9/33)   Comprimiendo objetos:  30% (10/33)   Comprimiendo objetos:  33% (11/33)   Comprimiendo objetos:  36% (12/33)   Comprimiendo objetos:  39% (13/33)   Comprimiendo objetos:  42% (14/33)   Comprimiendo objetos:  45% (15/33)   Comprimiendo objetos:  48% (16/33)   Comprimiendo objetos:  51% (17/33)   Comprimiendo objetos:  54% (18/33)   Comprimiendo objetos:  57% (19/33)   Comprimiendo objetos:  60% (20/33)   Comprimiendo objetos:  63% (21/33)   Comprimiendo objetos:  66% (22/33)   Comprimiendo objetos:  69% (23/33)   Comprimiendo objetos:  72% (24/33)   Comprimiendo objetos:  75% (25/33)   Comprimiendo objetos:  78% (26/33)   Comprimiendo objetos:  81% (27/33)   Comprimiendo objetos:  84% (28/33)   Comprimiendo objetos:  87% (29/33)   Comprimiendo objetos:  90% (30/33)   Comprimiendo objetos:  93% (31/33)   Comprimiendo objetos:  96% (32/33)   Comprimiendo objetos: 100% (33/33)   Comprimiendo objetos: 100% (33/33), listo.
+Escribiendo objetos:   2% (1/40)   Escribiendo objetos:   5% (2/40)   Escribiendo objetos:   7% (3/40)   Escribiendo objetos:  10% (4/40)   Escribiendo objetos:  12% (5/40)   Escribiendo objetos:  15% (6/40)   Escribiendo objetos:  17% (7/40)   Escribiendo objetos:  20% (8/40)   Escribiendo objetos:  22% (9/40)   Escribiendo objetos:  25% (10/40)   Escribiendo objetos:  27% (11/40)   Escribiendo objetos:  30% (12/40)   Escribiendo objetos:  32% (13/40)   Escribiendo objetos:  35% (14/40)   Escribiendo objetos:  37% (15/40)   Escribiendo objetos:  40% (16/40)   Escribiendo objetos:  45% (18/40)   Escribiendo objetos:  50% (20/40)   Escribiendo objetos:  55% (22/40)   Escribiendo objetos:  57% (23/40)   Escribiendo objetos:  60% (24/40)   Escribiendo objetos:  62% (25/40)   Escribiendo objetos:  65% (26/40)   Escribiendo objetos:  67% (27/40)   Escribiendo objetos:  70% (28/40)   Escribiendo objetos:  72% (29/40)   Escribiendo objetos:  75% (30/40)   Escribiendo objetos:  77% (31/40)   Escribiendo objetos:  80% (32/40)   Escribiendo objetos:  82% (33/40)   Escribiendo objetos:  85% (34/40)   Escribiendo objetos:  87% (35/40)   Escribiendo objetos:  90% (36/40)   Escribiendo objetos:  92% (37/40)   Escribiendo objetos:  95% (38/40)   Escribiendo objetos:  97% (39/40)   Escribiendo objetos: 100% (40/40)   Escribiendo objetos: 100% (40/40), 828.35 KiB | 7.89 MiB/s, listo.
+Total 40 (delta 5), reused 0 (delta 0)
+remote: Resolving deltas:   0% (0/5)[Kremote: Resolving deltas:  40% (2/5)[Kremote: Resolving deltas:  60% (3/5)[Kremote: Resolving deltas:  80% (4/5)[Kremote: Resolving deltas: 100% (5/5)[Kremote: Resolving deltas: 100% (5/5), completed with 1 local object.[K
+To https://github.com/maRce10/sex-dependent_response_calling_thyroptera.git
+   dec3b58..2fe3844  master -> master
+]0;/home/m/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera]0;m@m-MacBookPro: ~/sda5/Dropbox/Projects/sex-dependent_response_calling_thyroptera[01;32mm@m-MacBookPro[00m:[01;34m~/sda5/Dropbox/Projects/sex-dependent_response_caalling_thyroptera[00m$ 

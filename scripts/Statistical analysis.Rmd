@@ -99,7 +99,7 @@ facet_wrap(~ est_repr) + ggtitle("Experimentos con respuesta")
 
 ## Multinomial mixed effect models (MCMCglmm)
 
-- Including three-way interaction between 'sex response', 'sex inquiry' and 'reproductive stage':
+- Including three-way interaction between 'sex response', 'sex inquiry' and 'reproductive stage', with individual ID as random effect:
 
 ```{r}
 
@@ -142,15 +142,26 @@ ggplot(Y, aes(x=values)) +
 
 ```
 
-Estimates of the overlap of posteriors can be used a statistical significance test. For instance we can compare calling activity between sexes during the active stage:
-
 
 ```{r}
 
-# get p value
-p.val <- sum(md$Sol[, "M:Activo:sexo_consultaH"] - md$Sol[, "H:Activo:sexo_consultaH"] < 0) / nrow(md$Sol)
+pvals <- round(sapply(unique(Y$ind), function(x) sum(Y$values[Y$ind ==x] <= 0) / sum(Y$ind ==x)), 3)
 
-p.val
+names(pvals) <- unique(Y$ind)
+
+pvals
+```
+
+Estimates of the overlap of posteriors can be used a statistical significance test. For instance we can compare calling activity between sexes during the active stage:
+
+```{r}
+
+# p value
+pvals <- pbapply::pbreplicate(10000, expr =
+sum(md$Sol[sample(nrow(md$Sol)), "M:Activo:sexo_consultaH"] - md$Sol[, "H:Activo:sexo_consultaH"] < 0) / nrow(md$Sol)
+)
+
+mean(pvals)
 
 # plot distributions
 ggplot(Y[Y$ind %in% c("H:Activo:sexo_consultaH", "M:Activo:sexo_consultaH"), ], aes(x=values)) + geom_density(aes(group = ind, colour = ind, fill = ind), alpha=0.3) + 
@@ -166,9 +177,11 @@ Or whether males responde more to females during the reproductive stage:
 ```{r}
 
 # p value
-p.val <- sum(md$Sol[, "M:Activo:sexo_consultaH"] - md$Sol[, "M:Inactivo:sexo_consultaH"] < 0) / nrow(md$Sol)
+pvals <- pbapply::pbreplicate(10000, expr =
+sum(md$Sol[sample(nrow(md$Sol)), "M:Activo:sexo_consultaH"] - md$Sol[, "M:Inactivo:sexo_consultaH"] < 0) / nrow(md$Sol)
+)
 
-p.val
+mean(pvals)
 
 # plot distributions
 ggplot(Y[Y$ind %in% c("M:Activo:sexo_consultaM", "M:Inactivo:sexo_consultaM"), ], aes(x=values)) + geom_density(aes(group = ind, colour = ind, fill = ind), alpha=0.3) + 
@@ -179,6 +192,66 @@ ggplot(Y[Y$ind %in% c("M:Activo:sexo_consultaM", "M:Inactivo:sexo_consultaM"), ]
 
 ```
 
+Whether males respond more often to females during the active period:
+```{r}
+
+# p value
+pvals <- pbapply::pbreplicate(10000, expr =
+sum(md$Sol[sample(nrow(md$Sol)), "M:Activo:sexo_consultaH"] - md$Sol[, "M:Activo:sexo_consultaM"] < 0) / nrow(md$Sol)
+)
+
+mean(pvals)
+
+# plot distributions
+ggplot(Y[Y$ind %in% c("M:Activo:sexo_consultaH", "M:Activo:sexo_consultaM"), ], aes(x=values)) + geom_density(aes(group = ind, colour = ind, fill = ind), alpha=0.3) + 
+    scale_color_viridis_d(alpha = 0.7, begin = 0.4, end = 0.8) +
+    scale_fill_viridis_d(alpha = 0.7, begin = 0.4, end = 0.8) +
+    labs(y = "Density", x = "Posterior") +
+  theme_classic(base_size = 24)
+
+```
+
+
+Whether females respond differentially to sexes:
+```{r}
+
+# p value
+pvals <- pbapply::pbreplicate(10000, expr =
+sum(md$Sol[sample(nrow(md$Sol)), "H:Inactivo:sexo_consultaM"] - md$Sol[, "H:Inactivo:sexo_consultaH"] < 0) / nrow(md$Sol)
+)
+
+mean(pvals)
+
+# plot distributions
+ggplot(Y[Y$ind %in% c("H:Inactivo:sexo_consultaM", "H:Inactivo:sexo_consultaH"), ], aes(x=values)) + geom_density(aes(group = ind, colour = ind, fill = ind), alpha=0.3) + 
+  geom_vline(xintercept = 0, lty = 2, col = "red") +
+    scale_color_viridis_d(alpha = 0.7, begin = 0.4, end = 0.8) +
+    scale_fill_viridis_d(alpha = 0.7, begin = 0.4, end = 0.8) +
+    labs(y = "Density", x = "Posterior") +
+  theme_classic(base_size = 24)
+
+```
+
+
+```{r}
+
+head(dat)
+
+dat_dups <- lapply(1:nrow(dat), function(x){
+  
+  Y <- dat[x, ]
+  if (Y$n_llamadas > 1)
+  Z <- Y[rep(1, Y$n_llamadas), ]
+  Z$playback <- as.character(x)
+  
+  return(Z)
+  
+}) 
+
+
+```
+
+
 
 #### Diagnostic plots
 
@@ -186,6 +259,99 @@ ggplot(Y[Y$ind %in% c("M:Activo:sexo_consultaM", "M:Inactivo:sexo_consultaM"), ]
 
 plot(md$Sol)
 
+
+```
+
+
+### Sex discrimination using random forest
+
+```{r}
+
+library("warbleR")
+
+
+est <- readRDS("./data/ext_sel_tab_inquiry.RDS")
+
+
+est.adult <- est[est$age.class == "adults", ]
+
+
+table(est.adult$sex)
+
+tab <- table(est.adult$indiv)
+
+
+sum(tab > 4)
+
+est.adult.4 <- est.adult[est.adult$indiv %in% names(tab[tab > 4])]
+
+
+table(est.adult.4$indiv, est.adult.4$sex)
+
+
+sp <- specan(est.adult.4, wl = 1100)
+anyNA(sp)
+
+library(ranger)
+
+sp$random <- rnorm(nrow(sp))
+
+
+cc <- mfcc_stats(est.adult.4)
+
+
+
+est.adult.4 <- resample_est(est.adult.4, samp.rate = 375)
+
+xc <- xcorr(est.adult.4, wl = 1100)
+
+
+dist_xc <- 1 - xc
+
+
+# otro metodo de MDS (bootMDS)
+xc_cmd <- cmdscale(dist_xc, k = 10)
+
+xc_cmd <- as.data.frame(xc_cmd)
+
+
+sp.cc <- cbind(sp, cc[ , -c(1, 2)], xc_cmd)
+
+sp.cc[, -c(1, 2)] <- scale(sp.cc[, -c(1, 2)])
+
+
+names(sp.cc)
+
+anyNA(sp.cc)
+
+sp.cc$sex <- est.adult.4$sex
+
+# optimizar el mtry
+rfm <- ranger(sex ~ ., data = sp.cc[, -c(1, 2)], num.trees = 10000, importance = "impurity")
+
+rfm
+
+imp <- rfm$variable.importance
+
+imp_df <- data.frame(var = names(imp), imp = imp)
+
+imp_df[order(- imp_df$imp), ]
+
+
+table(est.adult.4$sex)
+sp.cc.rand <- sp.cc
+
+sp.cc.rand$sex <- sample(sp.cc.rand$sex)
+
+ranger(sex ~ ., data = sp.cc.rand[, -c(1, 2)], num.trees = 10000, importance = "impurity")
+
+
+for(i in unique(est.adult.4$indiv))
+
+jck_nf <- sapply(unique(est.adult.4$indiv), function(i)
+ranger(sex ~ ., data = sp.cc[est.adult.4$indiv != i, -c(1, 2)], num.trees = 10000, importance = "impurity")$prediction.error)
+
+range(jck_nf)
 
 ```
 
