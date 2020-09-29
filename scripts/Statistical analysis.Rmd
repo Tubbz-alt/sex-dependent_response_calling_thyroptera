@@ -24,7 +24,7 @@ editor_options:
 out <- sapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), function(x) try(detach(x, unload = FALSE, character.only = TRUE), silent = T))
 
 ## add 'developer/' to packages to be installed from github
-x <- c("ggplot2", "readxl", "viridis", "MCMCglmm")
+x <- c("ggplot2", "readxl", "viridis", "MCMCglmm", "ranger", "warbleR", "bioacoustics", "Sim.DiffProc")
 
 aa <- lapply(x, function(y) {
   
@@ -53,10 +53,11 @@ knitr::opts_knit$set(root.dir = normalizePath(".."))
 # fig quality
 knitr::opts_chunk$set(dpi = 50, fig.width = 12) 
 
+num.trees <- 10000
 ```
 
 ## Exploratory graphs
-```{r read data, fig.height = 6}
+```{r read data, fig.height = 6, eval = TRUE}
 
 # read data
 dat <- read_excel("./data/Datos de respuestas_cap2.xlsx")
@@ -101,7 +102,7 @@ facet_wrap(~ est_repr) + ggtitle("Experimentos con respuesta")
 
 - Including three-way interaction between 'sex response', 'sex inquiry' and 'reproductive stage', with individual ID as random effect:
 
-```{r}
+```{r MCMCglmm, eval = FALSE}
 
 # define parmeters for MCMCglmm models
 itrns <- 300000
@@ -114,7 +115,7 @@ pr <- list(B = list(mu = rep(0, 8), V = diag(8) * (1 + pi^2/3)), R = list(V = 1,
 # run model
 md <- MCMCglmm(n_llam_bin ~ sexo_respuesta:est_repr:sexo_consulta  - 1, random = ~ ID, data = dat, family = "categorical", prior = pr, verbose = FALSE, nitt = itrns, start = list(QUASI = FALSE), burnin = burnin, thin = thin)
 
-
+saveRDS(md, "./output/MCMC_model_response_by_sex_test.RDS")
 
 ```
 
@@ -122,7 +123,10 @@ md <- MCMCglmm(n_llam_bin ~ sexo_respuesta:est_repr:sexo_consulta  - 1, random =
 
 The output contains the posterior distribution of the parameter estimates. These parameter distributions can be used to test specific hypothesis about differences between sexes/stages/inquiry sexes. Column names in `md$Sol` (solutions) refer to the combination of levels from the 3 interacting variables:
 
-```{r, fig.height = 14}
+```{r read MCMC results, fig.height = 14, eval = FALSE}
+
+md <- readRDS("./output/MCMC_model_response_by_sex_test.RDS")
+
 
 # simplify names
 colnames(md$Sol) <- gsub("sexo_respuesta|est_repr", "", colnames(md$Sol))
@@ -143,25 +147,16 @@ ggplot(Y, aes(x=values)) +
 ```
 
 
-```{r}
-
-pvals <- round(sapply(unique(Y$ind), function(x) sum(Y$values[Y$ind ==x] <= 0) / sum(Y$ind ==x)), 3)
-
-names(pvals) <- unique(Y$ind)
-
-pvals
-```
-
 Estimates of the overlap of posteriors can be used a statistical significance test. For instance we can compare calling activity between sexes during the active stage:
 
-```{r}
+```{r eval = TRUE}
 
 # p value
-pvals <- pbapply::pbreplicate(10000, expr =
+pbapply::pboptions(type = "none")
+
+pvals <- pbapply::pbreplicate(num.trees, expr =
 sum(md$Sol[sample(nrow(md$Sol)), "M:Activo:sexo_consultaH"] - md$Sol[, "H:Activo:sexo_consultaH"] < 0) / nrow(md$Sol)
 )
-
-mean(pvals)
 
 # plot distributions
 ggplot(Y[Y$ind %in% c("H:Activo:sexo_consultaH", "M:Activo:sexo_consultaH"), ], aes(x=values)) + geom_density(aes(group = ind, colour = ind, fill = ind), alpha=0.3) + 
@@ -174,14 +169,14 @@ ggplot(Y[Y$ind %in% c("H:Activo:sexo_consultaH", "M:Activo:sexo_consultaH"), ], 
 
 Or whether males responde more to females during the reproductive stage:
 
-```{r}
+```{r, eval = FALSE}
 
 # p value
-pvals <- pbapply::pbreplicate(10000, expr =
+pvals <- pbapply::pbreplicate(num.trees, expr =
 sum(md$Sol[sample(nrow(md$Sol)), "M:Activo:sexo_consultaH"] - md$Sol[, "M:Inactivo:sexo_consultaH"] < 0) / nrow(md$Sol)
 )
 
-mean(pvals)
+# mean(pvals)
 
 # plot distributions
 ggplot(Y[Y$ind %in% c("M:Activo:sexo_consultaM", "M:Inactivo:sexo_consultaM"), ], aes(x=values)) + geom_density(aes(group = ind, colour = ind, fill = ind), alpha=0.3) + 
@@ -196,7 +191,7 @@ Whether males respond more often to females during the active period:
 ```{r}
 
 # p value
-pvals <- pbapply::pbreplicate(10000, expr =
+pvals <- pbapply::pbreplicate(num.trees, expr =
 sum(md$Sol[sample(nrow(md$Sol)), "M:Activo:sexo_consultaH"] - md$Sol[, "M:Activo:sexo_consultaM"] < 0) / nrow(md$Sol)
 )
 
@@ -211,12 +206,11 @@ ggplot(Y[Y$ind %in% c("M:Activo:sexo_consultaH", "M:Activo:sexo_consultaM"), ], 
 
 ```
 
-
 Whether females respond differentially to sexes:
 ```{r}
 
 # p value
-pvals <- pbapply::pbreplicate(10000, expr =
+pvals <- pbapply::pbreplicate(num.trees, expr =
 sum(md$Sol[sample(nrow(md$Sol)), "H:Inactivo:sexo_consultaM"] - md$Sol[, "H:Inactivo:sexo_consultaH"] < 0) / nrow(md$Sol)
 )
 
@@ -232,126 +226,195 @@ ggplot(Y[Y$ind %in% c("H:Inactivo:sexo_consultaM", "H:Inactivo:sexo_consultaH"),
 
 ```
 
-
-```{r}
-
-head(dat)
-
-dat_dups <- lapply(1:nrow(dat), function(x){
-  
-  Y <- dat[x, ]
-  if (Y$n_llamadas > 1)
-  Z <- Y[rep(1, Y$n_llamadas), ]
-  Z$playback <- as.character(x)
-  
-  return(Z)
-  
-}) 
-
-
-```
-
-
-
 #### Diagnostic plots
 
 ```{r diagnostic plots for model, fig.height = 14}
 
 plot(md$Sol)
 
+```
+
+---
+
+## Sex discrimination using random forest
+
+Measure acoustic structure on data from [call ontogeny paper](https://figshare.com/articles/dataset/Supplementary_materials_Ontogeny_of_an_interactive_call-and-response_system_in_Spix_s_disc-winged_bats_PART_1/11651772)
+
+```{r, eval = FALSE}
+
+# read extended selection table downloaded from figshare (ontogeny paper)
+est <- readRDS("./data/ext_sel_tab_inquiry.RDS")
+
+# keep adults only
+est.adult <- est[est$age.class == "adults", ]
+
+# check data
+table(est.adult$sex)
+
+# check number of calls per ID
+tab <- table(est.adult$indiv)
+
+# number of indiv with at least 4 calls
+sum(tab > 4)
+
+# keep indiv with at least 4 calls
+est.adult.4 <- est.adult[est.adult$indiv %in% names(tab[tab > 4]), ]
+
+# check again
+table(est.adult.4$indiv, est.adult.4$sex)
+
+# homogenize sampling rate
+est.adult.4 <- resample_est(est.adult.4, samp.rate = 375)
+
+######## measure acoustic structure ######
+# measure spectrographic parameters
+sp <- specan(est.adult.4, wl = 1100)
+
+# check if there are NAs
+anyNA(sp)
+
+# add random variable
+sp$random <- rnorm(nrow(sp))
+
+# measure cepstral coeffs
+cc <- mfcc_stats(est.adult.4)
+
+# bind all acoustic structure parameters together
+sp.cc <- cbind(sp, cc[ , -c(1, 2)])
+
+# scale 
+sp.cc[, -c(1, 2)] <- scale(sp.cc[, -c(1, 2)])
+
+# add sex to data for random forest
+sp.cc$sex <- est.adult.4$sex
+
+write.csv(sp.cc, "./data/processed/acoustic_parameters_for_random_forest.csv", row.names = FALSE)
 
 ```
 
+Model using both spectral parameters and MFCC:
 
-### Sex discrimination using random forest
+```{r, eval = TRUE}
 
-```{r}
+sp.cc <- read.csv("./data/processed/acoustic_parameters_for_random_forest.csv")
 
-library("warbleR")
+# convert to factor
+sp.cc$sex <- as.factor(sp.cc$sex)
 
+# run RF model spectral and cepstral parameters
+rfm <- ranger(sex ~ ., data = sp.cc[, -c(1, 2)], num.trees = num.trees, importance = "impurity")
 
-est <- readRDS("./data/ext_sel_tab_inquiry.RDS")
-
-
-est.adult <- est[est$age.class == "adults", ]
-
-
-table(est.adult$sex)
-
-tab <- table(est.adult$indiv)
-
-
-sum(tab > 4)
-
-est.adult.4 <- est.adult[est.adult$indiv %in% names(tab[tab > 4])]
-
-
-table(est.adult.4$indiv, est.adult.4$sex)
-
-
-sp <- specan(est.adult.4, wl = 1100)
-anyNA(sp)
-
-library(ranger)
-
-sp$random <- rnorm(nrow(sp))
-
-
-cc <- mfcc_stats(est.adult.4)
-
-
-
-est.adult.4 <- resample_est(est.adult.4, samp.rate = 375)
-
-xc <- xcorr(est.adult.4, wl = 1100)
-
-
-dist_xc <- 1 - xc
-
-
-# otro metodo de MDS (bootMDS)
-xc_cmd <- cmdscale(dist_xc, k = 10)
-
-xc_cmd <- as.data.frame(xc_cmd)
-
-
-sp.cc <- cbind(sp, cc[ , -c(1, 2)], xc_cmd)
-
-sp.cc[, -c(1, 2)] <- scale(sp.cc[, -c(1, 2)])
-
-
-names(sp.cc)
-
-anyNA(sp.cc)
-
-sp.cc$sex <- est.adult.4$sex
-
-# optimizar el mtry
-rfm <- ranger(sex ~ ., data = sp.cc[, -c(1, 2)], num.trees = 10000, importance = "impurity")
-
+# model results (check out-of-bag error)
 rfm
 
+# variable importance
 imp <- rfm$variable.importance
 
+```
+
+Model using spectral parameters 
+
+```{r, eval = TRUE}
+
+# run RF model only spectral parameters
+rfm_sp <- ranger(sex ~ ., data = sp.cc[, -c(1, 2, grep("\\.cc", names(sp.cc)))], num.trees = num.trees, importance = "impurity")
+
+# model results (check out-of-bag error)
+rfm_sp
+
+
+```
+
+Model using MFCC 
+
+```{r, eval = TRUE}
+# run RF model only spectral parameters
+rfm_cc <- ranger(sex ~ ., data = sp.cc[, grep("\\.cc|sex", names(sp.cc))], num.trees = num.trees, importance = "impurity")
+
+# model results (check out-of-bag error)
+rfm_cc
+
+# bind  varaible naes and importance
 imp_df <- data.frame(var = names(imp), imp = imp)
 
-imp_df[order(- imp_df$imp), ]
+# check iimportance
+imp_df <- imp_df[order(- imp_df$imp), ]
 
+imp_df[1: which(imp_df$var == "random"), ]
 
-table(est.adult.4$sex)
+# create null model
+# table(est.adult.4$sex)
 sp.cc.rand <- sp.cc
 
+# randomize position of sex labels
 sp.cc.rand$sex <- sample(sp.cc.rand$sex)
 
-ranger(sex ~ ., data = sp.cc.rand[, -c(1, 2)], num.trees = 10000, importance = "impurity")
+# run null model 
+nll_rfm <- ranger(sex ~ ., data = sp.cc.rand[, -c(1, 2)], num.trees = num.trees, importance = "impurity")
+
+nll_rfm$prediction.error
+
+```
+
+### Individual effect and null model 
+
+```{r, eval = FALSE}
 
 
+#### check effect of individuals using ### 
+# run model removing one individual at the time
 for(i in unique(est.adult.4$indiv))
-
 jck_nf <- sapply(unique(est.adult.4$indiv), function(i)
-ranger(sex ~ ., data = sp.cc[est.adult.4$indiv != i, -c(1, 2)], num.trees = 10000, importance = "impurity")$prediction.error)
+ranger(sex ~ ., data = sp.cc[est.adult.4$indiv != i, -c(1, 2)], num.trees = num.trees, importance = "impurity")$prediction.error)
 
+# check prediction errors
+jck_nf
 range(jck_nf)
+
+sd(jck_nf)
+
+#### check effect of individuals on null model ### 
+# run model removing one individual at the time
+for(i in unique(est.adult.4$indiv))
+jck_nf_null <- sapply(unique(est.adult.4$indiv), function(i)
+ranger(sex ~ ., data = sp.cc.rand[est.adult.4$indiv != i, -c(1, 2)], num.trees = num.trees, importance = "impurity")$prediction.error)
+
+# check prediction errors
+jck_nf_null
+range(jck_nf_null)
+
+jk_res <- data.frame(error = c(jck_nf, jck_nf_null), test = rep(c("real.data", "null.model"), each = length(jck_nf)))
+
+null_errors <- pbapply::pbreplicate(num.trees, expr = ranger(sex ~ ., data = sp.cc.rand[, -c(1, 2)], num.trees = num.trees, importance = "impurity")$prediction.error
+)
+
+jk_res <- rbind(jk_res, data.frame(error = null_errors, test = "null_repeated"))
+
+write.csv(jk_res, "./data/processed/jacknifed_random_forest_error.csv", row.names = FALSE)
+
+```
+
+#### jackknife random forest results
+
+ - null.repeated = the null random forest model repeated (without jackknife)
+ - null.model = null model with jacknife
+ - real.data = real data!
+ 
+```{r, eval = TRUE}
+
+jk_res <- read.csv("./data/processed/jacknifed_random_forest_error.csv")
+
+jk_res$error <- 1 - jk_res$error
+
+agg_jk_res <- aggregate(error ~ test, data = jk_res, FUN = mean)
+
+agg_jk_res$sd <- aggregate(error ~ test, data = jk_res, FUN = sd)$error
+
+ggplot(agg_jk_res, aes(x = test, y = error)) + 
+  geom_point(fill = viridis(10)[2]) +
+  geom_errorbar(aes(ymin = error - sd, ymax = error + sd), width = 0.1) +  
+  labs(x = "Random forest models", y = "Sex discrimination (1 - out-of-bag error") + 
+  theme_classic()
 
 ```
 
