@@ -25,8 +25,9 @@ Code used for data analysis on response rates to inquiry call playbacks. Males a
 
 ## To-do list
 
-* Run models 3 times
+* Run MCMCglmmm models 3 times
 * Compare against null model
+* Check MCMCglmmm model diagnostics
 
 
 ## Status
